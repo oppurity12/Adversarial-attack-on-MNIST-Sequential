@@ -1,0 +1,10 @@
+alpha: 3.0
+epsilon: 0.05
+gpus: 1
+hidden_dim: 128
+input_dim: 28
+learning_rate: 0.001
+num_classes: 10
+num_layers: 1
+rnn_type: !!python/name:GRUAlpha.GRUModelAlpha ''
+seq_length: 28

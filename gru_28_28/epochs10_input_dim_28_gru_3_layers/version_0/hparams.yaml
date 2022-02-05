@@ -1,0 +1,10 @@
+alpha: 1.0
+epsilon: 0.05
+gpus: 1
+hidden_dim: 128
+input_dim: 28
+learning_rate: 0.001
+num_classes: 10
+num_layers: 3
+rnn_type: !!python/name:torch.nn.modules.rnn.GRU ''
+seq_length: 28
