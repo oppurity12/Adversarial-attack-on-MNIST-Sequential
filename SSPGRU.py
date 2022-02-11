@@ -13,8 +13,8 @@ class SSRGRUCell(nn.Module):
         self.h2h = nn.Linear(hidden_size, 3 * hidden_size, bias=bias)
         self.reset_parameters()
 
-        self.alpha_2_1 = nn.Parameter(torch.randn(1))
-        self.beta_1_0 = nn.Parameter(torch.randn(1))
+        self.alpha_2_1 = nn.Parameter(torch.tensor(-1.0), requires_grad=False)
+        self.beta_1_0 = nn.Parameter(torch.tensor(0.5), requires_grad=True)
 
     def reset_parameters(self):
         std = 1.0 / math.sqrt(self.hidden_size)
@@ -37,13 +37,14 @@ class SSRGRUCell(nn.Module):
         return new_hidden
 
     def forward(self, x, hidden):
-        alpha_2_0 = 1 - self.alpha_2_1
-        beta_2_0 = 1 - 1 / (2 * self.beta_1_0) - (self.alpha_2_1 * self.beta_1_0)
-        beta_2_1 = 1 / (2 * self.beta_1_0)
+        m = nn.Sigmoid()
+        alpha_2_0 = 1 - m(self.alpha_2_1)
+        beta_2_0 = 1 - 1 / (2 * m(self.beta_1_0)) - m(self.alpha_2_1) * m(self.beta_1_0)
+        beta_2_1 = 1 / (2 * m(self.beta_1_0))
 
-        half_step_hidden = hidden + self.beta_1_0 * self.forward_one_step(x, hidden)
+        half_step_hidden = hidden + m(self.beta_1_0) * self.forward_one_step(x, hidden)
         new_hidden = alpha_2_0 * hidden + beta_2_0 * self.forward_one_step(x, hidden) + \
-            self.alpha_2_1 * half_step_hidden + beta_2_1 * self.forward_one_step(x, half_step_hidden)
+            m(self.alpha_2_1) * half_step_hidden + beta_2_1 * self.forward_one_step(x, half_step_hidden)
 
         return new_hidden
 

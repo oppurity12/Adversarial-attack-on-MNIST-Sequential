@@ -33,14 +33,11 @@ class GRUCellAlpha(nn.Module):
         inputgate = torch.sigmoid(i_i + h_i)
         newgate = torch.tanh(i_n + (resetgate * h_n))
         new_hidden = newgate - hidden
-        #new_hidden = torch.tanh(newgate - hidden)
-        #new_hidden = self.residual_h(new_hidden)
+
         if x.size(1) != hidden.size(1):
              new_hidden = (self.proj(x) + self.alpha * new_hidden)
         else:
              new_hidden = x + self.alpha * new_hidden
-
-        #new_hidden = (self.proj(x) + new_hidden)
 
         new_hidden = (1 - inputgate) * new_hidden
 

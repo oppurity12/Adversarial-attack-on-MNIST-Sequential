@@ -13,9 +13,6 @@ class SSP2GRUCell(nn.Module):
         self.h2h = nn.Linear(hidden_size, 3 * hidden_size, bias=bias)
         self.reset_parameters()
 
-        self.alpha_2_1 = nn.Parameter(torch.randn(1))
-        self.beta_1_0 = nn.Parameter(torch.randn(1))
-
     def reset_parameters(self):
         std = 1.0 / math.sqrt(self.hidden_size)
         for w in self.parameters():
@@ -38,7 +35,7 @@ class SSP2GRUCell(nn.Module):
 
     def forward(self, x, hidden):
         half_step_hidden = hidden + self.forward_one_step(x, hidden)
-        new_hidden = hidden / 2 + half_step_hidden / 2 + self.forward_one_step(x, half_step_hidden) / 2
+        new_hidden = (hidden / 2) + (half_step_hidden / 2) + (self.forward_one_step(x, half_step_hidden) / 2)
         return new_hidden
 
 

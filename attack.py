@@ -7,6 +7,7 @@ from tqdm import tqdm
 def fgsm(data, epsilon):
     perturbation = data.grad.data.sign()
     perturbed_data = data + epsilon * perturbation
+    perturbed_data = torch.clamp(perturbed_data, 0, 1)
     return perturbed_data
 
 
@@ -39,11 +40,50 @@ def fg_main(model, data_loader, epsilon, gpus):
 
         adv_accuracy += adv_prediction
 
-    adv_accuracy = (adv_accuracy / total_batch) * 100
+    adv_accuracy = (adv_accuracy / total_batch)
 
-    test_accuracy = (test_accuracy / total_batch) * 100
-    print(f"test_accuracy: {test_accuracy:.3f}%")
-    print(f"fgsm_accuracy: {adv_accuracy:.3f}%")
+    test_accuracy = (test_accuracy / total_batch)
+    print(f"test_accuracy: {test_accuracy:.3f}")
+    print(f"fgsm_accuracy: {adv_accuracy:.3f}")
+
+    return adv_accuracy, test_accuracy
+
+
+def fg_main2(model, data_loader, epsilon, gpus, num_layers, batch_size, hidden_dim):
+    total_batch = len(data_loader)
+    device = 'cuda' if gpus > 0 else 'cpu'
+    model = model.to(device)
+    criterion = nn.CrossEntropyLoss()
+    test_accuracy = 0
+    adv_accuracy = 0
+    for x, y in tqdm(data_loader, desc="attack model"):
+        x = x.to(device)
+        y = y.to(device)
+        x = x.permute(1, 0, 2).contiguous()
+        h = torch.zeros(num_layers, batch_size, hidden_dim).to(device)
+        h.requires_grad = True
+        output = model(x, h)
+
+        prediction = (torch.argmax(output, dim=1) == y).float().mean().item()
+        test_accuracy += prediction
+
+        loss = criterion(output, y)
+        model.zero_grad()
+        loss.backward()
+
+        perturbed_h = fgsm(h, epsilon)
+        perturbed_h = torch.clamp(perturbed_h, 0, 1)
+        perturbed_output = model(x, perturbed_h)
+
+        adv_prediction = (torch.argmax(perturbed_output, dim=1) == y).float().mean().item()
+
+        adv_accuracy += adv_prediction
+
+    adv_accuracy = (adv_accuracy / total_batch)
+
+    test_accuracy = (test_accuracy / total_batch)
+    print(f"test_accuracy: {test_accuracy:.3f}")
+    print(f"fgsm_accuracy: {adv_accuracy:.3f}")
 
     return adv_accuracy, test_accuracy
 

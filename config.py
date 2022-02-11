@@ -4,8 +4,10 @@ import os
 
 @dataclass
 class TrainConfig:
+    data_type: str = 'mnist'
+
     rnn_type: str = 'gru'
-    is_permuted: bool = True
+    is_permuted: bool = False
     input_dim: int = 28
     hidden_dim: int = 128
     seq_length: int = 28
@@ -19,6 +21,10 @@ class TrainConfig:
     epsilon: float = 0.05
     attack_steps: int = 3
     alpha: float = 1
+    beta: float = 1
+    seed: int = 0
+
+    embed_dim: int = 256
 
     checkpoint_dir: str = "gru_test"
     filename: str = ""
