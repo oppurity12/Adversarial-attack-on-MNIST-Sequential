@@ -3,18 +3,18 @@ import torch.nn as nn
 import math
 
 
-class GRUCellV1(nn.Module):
+class SSP2GRUCell(nn.Module):
     def __init__(self, input_size, hidden_size, bias=True):
-        super(GRUCellV1, self).__init__()
+        super(SSP2GRUCell, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.bias = bias
         self.x2h = nn.Linear(input_size, 3 * hidden_size, bias=bias)
         self.h2h = nn.Linear(hidden_size, 3 * hidden_size, bias=bias)
-
-        self.residual_h = nn.Linear(hidden_size, hidden_size, bias=bias)
-        self.proj = nn.Linear(input_size, hidden_size, bias=bias)
         self.reset_parameters()
+
+        self.alpha_2_1 = nn.Parameter(torch.randn(1))
+        self.beta_1_0 = nn.Parameter(torch.randn(1))
 
     def reset_parameters(self):
         std = 1.0 / math.sqrt(self.hidden_size)
@@ -31,36 +31,29 @@ class GRUCellV1(nn.Module):
         resetgate = torch.sigmoid(i_r + h_r)
         inputgate = torch.sigmoid(i_i + h_i)
         newgate = torch.tanh(i_n + (resetgate * h_n))
-        new_hidden = newgate - hidden
-        #new_hidden = torch.tanh(newgate - hidden)
-        #new_hidden = self.residual_h(new_hidden)
-        if x.size(1) != hidden.size(1):
-             new_hidden = (self.proj(x) + new_hidden)
-        else:
-             new_hidden = x + new_hidden
 
-        #new_hidden = (self.proj(x) + new_hidden)
-
-        new_hidden = (1 - inputgate) * new_hidden
+        new_hidden = (1 - inputgate) * (newgate - hidden)
 
         return new_hidden
 
     def forward(self, x, hidden):
-        return hidden + self.forward_one_step(x, hidden)
+        half_step_hidden = hidden + self.forward_one_step(x, hidden)
+        new_hidden = hidden / 2 + half_step_hidden / 2 + self.forward_one_step(x, half_step_hidden) / 2
+        return new_hidden
 
 
-class GRUModelV1(nn.Module):
+class SSP2GRUModel(nn.Module):
     def __init__(self, input_dim, hidden_dim, layer_dim, batch_first=False):
-        super(GRUModelV1, self).__init__()
+        super(SSP2GRUModel, self).__init__()
         self.hidden_dim = hidden_dim
         self.layer_dim = layer_dim
         self.batch_first = batch_first
         self.rnn = []
         for i in range(layer_dim):
             if i == 0:
-                self.rnn.append(GRUCellV1(input_dim, hidden_dim))
+                self.rnn.append(SSP2GRUCell(input_dim, hidden_dim))
                 continue
-            self.rnn.append(GRUCellV1(hidden_dim, hidden_dim))
+            self.rnn.append(SSP2GRUCell(hidden_dim, hidden_dim))
 
         self.rnn = nn.ModuleList(self.rnn)
 
